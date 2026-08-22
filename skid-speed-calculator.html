@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Skid Speed Calculator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500&display=swap">
+
+<style>
+  :root{
+    --bg:#E7E8E4;
+    --panel:#F7F7F4;
+    --panel-2:#EFEFEB;
+    --line:#CBCDC5;
+    --line-soft:#DDDED8;
+    --text:#191B1E;
+    --muted:#5C6169;
+    --accent:#B06D04;
+    --accent-ink:#5E3A00;
+    --accent-wash:#F4E3C4;
+    --grip-high:#2F6B35;
+    --grip-mid:#9A6B08;
+    --grip-low:#A32E1D;
+    --rubber:rgba(25,27,30,.82);
+    --shadow:0 1px 0 rgba(25,27,30,.05), 0 12px 28px -20px rgba(25,27,30,.45);
+    --r:4px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#131519;
+      --panel:#1B1E23;
+      --panel-2:#22262C;
+      --line:#31363E;
+      --line-soft:#282C33;
+      --text:#E9EAE5;
+      --muted:#969DA7;
+      --accent:#F0A81E;
+      --accent-ink:#FFD98A;
+      --accent-wash:#3A2E14;
+      --grip-high:#79B879;
+      --grip-mid:#E0AE3F;
+      --grip-low:#E2705C;
+      --rubber:rgba(233,234,229,.72);
+      --shadow:0 1px 0 rgba(255,255,255,.03), 0 14px 30px -22px #000;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#131519;
+    --panel:#1B1E23;
+    --panel-2:#22262C;
+    --line:#31363E;
+    --line-soft:#282C33;
+    --text:#E9EAE5;
+    --muted:#969DA7;
+    --accent:#F0A81E;
+    --accent-ink:#FFD98A;
+    --accent-wash:#3A2E14;
+    --grip-high:#79B879;
+    --grip-mid:#E0AE3F;
+    --grip-low:#E2705C;
+    --rubber:rgba(233,234,229,.72);
+    --shadow:0 1px 0 rgba(255,255,255,.03), 0 14px 30px -22px #000;
+  }
+
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:"IBM Plex Sans", system-ui, -apple-system, sans-serif;
+    font-size:15px;
+    line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1080px;margin:0 auto;padding:clamp(20px,4vw,44px) clamp(16px,4vw,32px) 64px}
+
+  /* ---------- masthead ---------- */
+  .masthead{
+    display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;
+    gap:18px;padding-bottom:16px;border-bottom:2px solid var(--text);
+  }
+  .eyebrow{
+    font-family:"Barlow Condensed","Arial Narrow",sans-serif;
+    font-weight:600;font-size:13px;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--muted);margin:0 0 2px;
+  }
+  h1{
+    font-family:"Barlow Condensed","Arial Narrow",sans-serif;
+    font-weight:700;font-size:clamp(30px,6vw,46px);line-height:.95;
+    letter-spacing:-.005em;text-transform:uppercase;margin:0;text-wrap:balance;
+  }
+  .masthead-tools{display:flex;align-items:center;gap:10px}
+
+  .seg{display:flex;border:1px solid var(--line);border-radius:var(--r);overflow:hidden;background:var(--panel)}
+  .seg button{
+    appearance:none;border:0;background:transparent;color:var(--muted);cursor:pointer;
+    font-family:"Barlow Condensed","Arial Narrow",sans-serif;font-weight:600;
+    font-size:14px;letter-spacing:.1em;text-transform:uppercase;padding:8px 14px;
+  }
+  .seg button + button{border-left:1px solid var(--line)}
+  .seg button[aria-pressed="true"]{background:var(--text);color:var(--panel)}
+  .ghost{
+    appearance:none;cursor:pointer;background:var(--panel);color:var(--text);
+    border:1px solid var(--line);border-radius:var(--r);padding:8px 14px;
+    font-family:"Barlow Condensed","Arial Narrow",sans-serif;font-weight:600;
+    font-size:14px;letter-spacing:.1em;text-transform:uppercase;
+  }
+  .ghost:hover,.seg button:hover{border-color:var(--muted);color:var(--text)}
+  :is(button,input,a):focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+  /* ---------- verdict band ---------- */
+  .verdict{
+    position:relative;margin-top:22px;background:var(--panel);
+    border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);
+    padding:clamp(20px,3.4vw,34px);overflow:hidden;
+  }
+  .verdict::before{
+    content:"";position:absolute;inset:0 0 auto;height:6px;
+    background:repeating-linear-gradient(115deg,var(--accent) 0 12px,var(--text) 12px 24px);
+    opacity:.9;
+  }
+  .verdict-grid{display:grid;grid-template-columns:auto 1fr;gap:clamp(18px,4vw,40px);align-items:end}
+  @media (max-width:640px){.verdict-grid{grid-template-columns:1fr;align-items:start}}
+
+  .speed{display:flex;align-items:flex-end;gap:10px}
+  .speed-num{
+    font-family:"Barlow Condensed","Arial Narrow",sans-serif;font-weight:700;
+    font-size:clamp(64px,15vw,124px);line-height:.82;letter-spacing:-.02em;
+    font-variant-numeric:tabular-nums;
+  }
+  .speed-unit{
+    font-family:"Barlow Condensed","Arial Narrow",sans-serif;font-weight:600;
+    font-size:clamp(18px,3vw,26px);letter-spacing:.08em;text-transform:uppercase;
+    color:var(--muted);padding-bottom:clamp(6px,1.2vw,14px);
+  }
+  .speed-alt{
+    font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:13px;color:var(--muted);
+    margin-top:10px;font-variant-numeric:tabular-nums;
+  }
+  .verdict-meta{display:flex;flex-direction:column;gap:12px;min-width:0}
+  .formula{
+    font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:clamp(13px,1.6vw,15px);
+    background:var(--panel-2);border:1px solid var(--line-soft);border-radius:var(--r);
+    padding:10px 12px;overflow-x:auto;white-space:nowrap;font-variant-numeric:tabular-nums;
+  }
+  .verdict-note{font-size:13px;color:var(--muted);max-width:52ch;margin:0}
+  .copy-row{display:flex;align-items:center;gap:12px}
+  .copy-state{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:12px;color:var(--grip-high);opacity:0;transition:opacity .2s}
+  .copy-state.on{opacity:1}
+
+  /* ---------- skid ruler ---------- */
+  .ruler{margin-top:clamp(22px,3vw,32px);border-top:1px solid var(--line-soft);padding-top:18px}
+  .ruler-head{
+    display:flex;justify-content:space-between;align-items:baseline;gap:12px;
+    font-family:"Barlow Condensed","Arial Narrow",sans-serif;font-weight:600;
+    font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);
+  }
+  .track{position:relative;margin-top:12px;padding:14px 0 4px}
+  .mark{height:9px;border-radius:2px;background:
+    repeating-linear-gradient(90deg,var(--rubber) 0 14px,transparent 14px 18px);
+    mask-image:linear-gradient(90deg,transparent,#000 12%,#000 100%);
+    -webkit-mask-image:linear-gradient(90deg,transparent,#000 12%,#000 100%);}
+  .mark + .mark{margin-top:9px}
+  .ticks{position:relative;height:30px;margin-top:8px;border-top:1px solid var(--line)}
+  .tick{position:absolute;top:0;transform:translateX(-50%)}
+  .tick i{display:block;width:1px;height:7px;background:var(--line);margin:0 auto}
+  .tick span{
+    display:block;font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:11px;
+    color:var(--muted);margin-top:4px;font-variant-numeric:tabular-nums;white-space:nowrap;
+  }
+  .tick.end i{height:11px;background:var(--accent)}
+  .tick.end span{color:var(--accent);font-weight:500}
+
+  /* ---------- columns ---------- */
+  .cols{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(288px,.85fr);gap:clamp(18px,2.6vw,28px);margin-top:clamp(18px,2.6vw,28px)}
+  @media (max-width:860px){.cols{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow)}
+  .card-head{
+    padding:14px 18px;border-bottom:1px solid var(--line);
+    font-family:"Barlow Condensed","Arial Narrow",sans-serif;font-weight:600;
+    font-size:14px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);
+  }
+  .breakdown{grid-column:1;grid-row:1}
+  .panel-controls{grid-column:2;grid-row:1}
+  @media (max-width:860px){
+    .breakdown,.panel-controls{grid-column:1;grid-row:auto}
+    .panel-controls{order:1}.breakdown{order:2}
+  }
+
+  /* ---------- table ---------- */
+  .tablescroll{overflow-x:auto}
+  table{width:100%;border-collapse:collapse;font-size:14px;min-width:460px}
+  th,td{text-align:left;padding:11px 18px;border-bottom:1px solid var(--line-soft);vertical-align:top}
+  thead th{
+    font-family:"Barlow Condensed","Arial Narrow",sans-serif;font-weight:600;
+    font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);
+    border-bottom:1px solid var(--line);white-space:nowrap;
+  }
+  tbody tr:nth-child(even){background:var(--panel-2)}
+  td.p{font-weight:500;white-space:nowrap}
+  td.p em{font-family:"IBM Plex Mono",ui-monospace,monospace;font-style:normal;color:var(--muted)}
+  td.v{font-family:"IBM Plex Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums;white-space:nowrap}
+  td.d{color:var(--muted);font-size:13px}
+  tbody tr.result{background:var(--accent-wash)}
+  tbody tr.result td{border-bottom-color:var(--accent);color:var(--accent-ink);font-weight:500}
+  tbody tr.result td.v{font-weight:600}
+  tbody tr.result td.d{color:var(--accent-ink);opacity:.85}
+  tr.derived td.p,tr.derived td.v{color:var(--muted)}
+
+  /* ---------- controls ---------- */
+  .controls{padding:18px;display:flex;flex-direction:column;gap:20px}
+  .field{display:flex;flex-direction:column;gap:8px}
+  label,.flabel{
+    font-family:"Barlow Condensed","Arial Narrow",sans-serif;font-weight:600;
+    font-size:14px;letter-spacing:.1em;text-transform:uppercase;
+    display:flex;justify-content:space-between;align-items:baseline;gap:10px;
+  }
+  label .hint,.flabel .hint{letter-spacing:0;text-transform:none;font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:11px;color:var(--muted);font-weight:400}
+  input[type="text"]{
+    width:100%;background:var(--panel-2);border:1px solid var(--line);border-radius:var(--r);
+    color:var(--text);padding:10px 12px;font-family:"IBM Plex Mono",ui-monospace,monospace;
+    font-size:15px;font-variant-numeric:tabular-nums;
+  }
+  input[type="text"]:focus{border-color:var(--accent);outline:none;box-shadow:0 0 0 2px var(--accent-wash)}
+  input[type="text"].bad{border-color:var(--grip-low)}
+
+  .sliderow{display:grid;grid-template-columns:1fr 68px;gap:12px;align-items:center}
+  .readout{
+    font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:14px;text-align:center;
+    background:var(--panel-2);border:1px solid var(--line);border-radius:var(--r);
+    padding:7px 4px;font-variant-numeric:tabular-nums;
+  }
+  input[type="range"]{
+    -webkit-appearance:none;appearance:none;width:100%;height:22px;background:transparent;margin:0;cursor:pointer;
+  }
+  input[type="range"]::-webkit-slider-runnable-track{
+    height:5px;border-radius:99px;
+    background:linear-gradient(to right,var(--text) calc(var(--pct,50) * 1%),var(--line) calc(var(--pct,50) * 1%));
+  }
+  input[type="range"]::-webkit-slider-thumb{
+    -webkit-appearance:none;width:17px;height:17px;border-radius:50%;
+    background:var(--text);border:3px solid var(--panel);margin-top:-6px;
+  }
+  input[type="range"]::-moz-range-track{height:5px;border-radius:99px;background:var(--line)}
+  input[type="range"]::-moz-range-progress{height:5px;border-radius:99px;background:var(--text)}
+  input[type="range"]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:var(--text);border:3px solid var(--panel)}
+
+  .chips{display:flex;flex-wrap:wrap;gap:6px}
+  .chip{
+    appearance:none;cursor:pointer;background:var(--panel-2);color:var(--muted);
+    border:1px solid var(--line);border-radius:99px;padding:5px 11px;
+    font-size:12px;font-family:"IBM Plex Sans",system-ui,sans-serif;
+  }
+  .chip:hover{color:var(--text);border-color:var(--muted)}
+  .chip[aria-pressed="true"]{background:var(--text);color:var(--panel);border-color:var(--text)}
+  .grip{
+    display:inline-flex;align-items:center;gap:6px;font-family:"IBM Plex Mono",ui-monospace,monospace;
+    font-size:11px;letter-spacing:.02em;
+  }
+  .grip::before{content:"";width:8px;height:8px;border-radius:2px;background:currentColor}
+  .grip.high{color:var(--grip-high)}.grip.mid{color:var(--grip-mid)}.grip.low{color:var(--grip-low)}
+  .divider{height:1px;background:var(--line-soft)}
+
+  /* ---------- method ---------- */
+  .method{margin-top:clamp(18px,2.6vw,28px);padding:18px;font-size:13px;color:var(--muted)}
+  .method h2{
+    font-family:"Barlow Condensed","Arial Narrow",sans-serif;font-weight:600;font-size:14px;
+    letter-spacing:.14em;text-transform:uppercase;color:var(--text);margin:0 0 8px;
+  }
+  .method p{margin:0 0 8px;max-width:78ch}
+  .method p:last-child{margin-bottom:0}
+  .method code{font-family:"IBM Plex Mono",ui-monospace,monospace;color:var(--text);font-size:12.5px}
+
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="masthead">
+    <div>
+      <p class="eyebrow">Collision reconstruction · minimum speed from tyre friction marks</p>
+      <h1>Skid Speed Calculator</h1>
+    </div>
+    <div class="masthead-tools">
+      <div class="seg" role="group" aria-label="Unit system">
+        <button type="button" id="uMetric" aria-pressed="true">Metric</button>
+        <button type="button" id="uImperial" aria-pressed="false">Imperial</button>
+      </div>
+      <button type="button" class="ghost" id="reset" title="Restore default values">Reset</button>
+    </div>
+  </header>
+
+  <section class="verdict" aria-labelledby="verdictLabel">
+    <h2 id="verdictLabel" class="eyebrow" style="margin:6px 0 14px">Minimum calculated speed</h2>
+    <div class="verdict-grid">
+      <div>
+        <div class="speed" aria-live="polite">
+          <span class="speed-num" id="speedNum">57.02</span>
+          <span class="speed-unit" id="speedUnit">km/h</span>
+        </div>
+        <div class="speed-alt" id="speedAlt">≈ 35.43 mph · 15.84 m/s</div>
+      </div>
+      <div class="verdict-meta">
+        <div class="formula" id="formula">S = √(254 × 18.288 × 0.70 × 1.00) = 57.02 km/h</div>
+        <p class="verdict-note">This is the speed lost to the skid alone — the vehicle was travelling at least this fast when the tyres locked.</p>
+        <div class="copy-row">
+          <button type="button" class="ghost" id="copy">Copy findings</button>
+          <span class="copy-state" id="copyState">Copied to clipboard</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="ruler">
+      <div class="ruler-head">
+        <span>Friction mark, drawn to scale</span>
+        <span id="rulerLen">18.288 m</span>
+      </div>
+      <div class="track">
+        <div class="mark"></div>
+        <div class="mark"></div>
+        <div class="ticks" id="ticks"></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="cols">
+    <section class="card breakdown" aria-label="Calculation breakdown">
+      <div class="card-head">Calculation breakdown</div>
+      <div class="tablescroll">
+        <table>
+          <thead>
+            <tr><th>Parameter</th><th>Value</th><th>Details / benchmarks</th></tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card panel-controls" aria-label="Inputs">
+      <div class="card-head">Inputs</div>
+      <div class="controls">
+        <div class="field">
+          <label for="dist">Skid distance <span class="hint" id="distUnit">metres</span></label>
+          <input type="text" id="dist" inputmode="decimal" value="18.288" autocomplete="off" aria-describedby="distErr">
+          <span class="hint" id="distErr" style="color:var(--grip-low);display:none">Enter a distance greater than zero.</span>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="field">
+          <span class="flabel">Drag factor <span class="grip high" id="gripTag">good grip</span></span>
+          <div class="sliderow">
+            <input type="range" id="dragR" min="0.05" max="1.10" step="0.01" value="0.70" aria-label="Drag factor">
+            <span class="readout" id="dragOut">0.70</span>
+          </div>
+          <div class="chips" id="surfaces" role="group" aria-label="Surface presets"></div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="field">
+          <span class="flabel">Braking efficiency <span class="hint" id="effHint">4-wheel lockup</span></span>
+          <div class="sliderow">
+            <input type="range" id="effR" min="10" max="100" step="1" value="100" aria-label="Braking efficiency, percent">
+            <span class="readout" id="effOut">100%</span>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="field">
+          <span class="flabel">Road grade <span class="hint" id="gradeHint">level</span></span>
+          <div class="sliderow">
+            <input type="range" id="gradeR" min="-15" max="15" step="0.5" value="0" aria-label="Road grade, percent">
+            <span class="readout" id="gradeOut">0.0%</span>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <section class="card method">
+    <h2>Method &amp; limits</h2>
+    <p>The calculator solves the work–energy relation <code>v = √(2 · f · g · d)</code>, folded into the field constants used in reconstruction practice: <code>S = √(254 · d · f · η)</code> for metres to km/h, and <code>S = √(30 · d · f · η)</code> for feet to mph. Grade is applied as <code>f_eff = f + G/100</code>, so an uphill skid stops shorter and an equal mark implies more speed.</p>
+    <p>Treat every result as a <em>minimum</em>. It accounts only for energy consumed by the visible friction mark — not pre-skid deceleration before the tyres locked, energy carried into an impact, post-impact travel, ABS cycling that leaves faint or intermittent marks, or a rolling start to the mark. Drag factor should come from a skid test on the same surface where one is available; the presets are typical published ranges, not measurements.</p>
+  </section>
+</div>
+
+<script>
+(function(){
+  var SURFACES = [
+    {name:"Dry asphalt",   f:0.70, lo:0.60, hi:0.85},
+    {name:"Wet asphalt",   f:0.50, lo:0.35, hi:0.60},
+    {name:"Dry concrete",  f:0.75, lo:0.65, hi:0.90},
+    {name:"Wet concrete",  f:0.55, lo:0.45, hi:0.70},
+    {name:"Gravel",        f:0.55, lo:0.40, hi:0.70},
+    {name:"Packed snow",   f:0.25, lo:0.18, hi:0.35},
+    {name:"Ice",           f:0.12, lo:0.08, hi:0.16}
+  ];
+  var DEFAULTS = {unit:"metric", d:18.288, f:0.70, eta:100, g:0};
+  var s = Object.assign({}, DEFAULTS);
+
+  var el = function(id){ return document.getElementById(id); };
+  var dist=el("dist"), distErr=el("distErr"), distUnit=el("distUnit"),
+      dragR=el("dragR"), dragOut=el("dragOut"), gripTag=el("gripTag"),
+      effR=el("effR"), effOut=el("effOut"), effHint=el("effHint"),
+      gradeR=el("gradeR"), gradeOut=el("gradeOut"), gradeHint=el("gradeHint"),
+      tbody=el("tbody"), ticks=el("ticks"), chips=el("surfaces");
+
+  SURFACES.forEach(function(sf,i){
+    var b=document.createElement("button");
+    b.type="button"; b.className="chip"; b.textContent=sf.name;
+    b.setAttribute("aria-pressed","false"); b.dataset.i=i;
+    b.addEventListener("click",function(){ s.f=sf.f; dragR.value=sf.f.toFixed(2); render(); });
+    chips.appendChild(b);
+  });
+
+  function nearestSurface(f){
+    var best=SURFACES[0], bd=Infinity;
+    SURFACES.forEach(function(sf){
+      var d = f<sf.lo ? sf.lo-f : (f>sf.hi ? f-sf.hi : 0);
+      if(d<bd){ bd=d; best=sf; }
+    });
+    return {sf:best, inside:bd===0};
+  }
+  function gripClass(f){ return f>=0.60?"high":(f>=0.35?"mid":"low"); }
+  function gripWord(f){ return f>=0.60?"good grip":(f>=0.35?"reduced grip":"low grip"); }
+  function effWords(e){
+    if(e>=100) return "4-wheel lockup";
+    if(e>=70)  return "3 wheels locked";
+    if(e>=45)  return "2 wheels locked";
+    return "1 wheel / light braking";
+  }
+  function effDetail(e){
+    if(e>=100) return "Total lockup on all four wheels.";
+    if(e>=70)  return "Three wheels locked, or near-total lockup.";
+    if(e>=45)  return "Two wheels locked — roughly half the available friction.";
+    return "Single-wheel lockup or partial brake application.";
+  }
+  function gradeWords(g){
+    if(Math.abs(g)<0.05) return "level";
+    return (g>0?"uphill ":"downhill ")+Math.abs(g).toFixed(1)+"%";
+  }
+  function fmt(n,dp){
+    return n.toLocaleString("en-US",{minimumFractionDigits:dp,maximumFractionDigits:dp});
+  }
+  function niceStep(span){
+    var raw = span/6, pow = Math.pow(10, Math.floor(Math.log(raw)/Math.LN10)), n = raw/pow;
+    var m = n<1.5?1 : n<3?2 : n<7?5 : 10;
+    return m*pow;
+  }
+
+  function compute(){
+    var metric = s.unit==="metric";
+    var C = metric?254:30;
+    var fEff = Math.max(0.01, s.f + s.g/100);
+    var S = Math.sqrt(C * s.d * fEff * (s.eta/100));
+    var kmh = metric ? S : S*1.609344;
+    return {metric:metric, C:C, fEff:fEff, S:S, kmh:kmh, ms:kmh/3.6,
+            mph: metric ? S/1.609344 : S,
+            unit: metric?"km/h":"mph", dUnit: metric?"m":"ft"};
+  }
+
+  function render(){
+    var metric = s.unit==="metric";
+    var r = compute();
+
+    // sliders
+    dragR.style.setProperty("--pct", ((s.f-0.05)/(1.10-0.05)*100).toFixed(2));
+    effR.style.setProperty("--pct", ((s.eta-10)/90*100).toFixed(2));
+    gradeR.style.setProperty("--pct", ((s.g+15)/30*100).toFixed(2));
+    dragOut.textContent = s.f.toFixed(2);
+    effOut.textContent = s.eta+"%";
+    gradeOut.textContent = (s.g>0?"+":"")+s.g.toFixed(1)+"%";
+    gripTag.className = "grip "+gripClass(s.f);
+    gripTag.textContent = gripWord(s.f);
+    effHint.textContent = effWords(s.eta);
+    gradeHint.textContent = gradeWords(s.g);
+    distUnit.textContent = metric?"metres":"feet";
+
+    var near = nearestSurface(s.f);
+    Array.prototype.forEach.call(chips.children, function(b){
+      var sf = SURFACES[+b.dataset.i];
+      b.setAttribute("aria-pressed", (near.inside && sf===near.sf && Math.abs(s.f-sf.f)<0.06) ? "true":"false");
+    });
+
+    // verdict
+    el("speedNum").textContent = fmt(r.S,2);
+    el("speedUnit").textContent = r.unit;
+    el("speedAlt").textContent = metric
+      ? "≈ "+fmt(r.mph,2)+" mph · "+fmt(r.ms,2)+" m/s"
+      : "≈ "+fmt(r.kmh,2)+" km/h · "+fmt(r.S*1.466667,2)+" ft/s";
+    el("formula").textContent = "S = √("+r.C+" × "+fmt(s.d,3)+" × "+r.fEff.toFixed(2)+" × "+(s.eta/100).toFixed(2)+") = "+fmt(r.S,2)+" "+r.unit;
+    el("rulerLen").textContent = fmt(s.d,3)+" "+r.dUnit;
+
+    // ruler ticks
+    var step = niceStep(s.d), out = "";
+    for(var v=0; v<s.d-step*0.35; v+=step){
+      out += '<span class="tick" style="left:'+(v/s.d*100)+'%"><i></i><span>'+fmt(v, step<1?1:0)+'</span></span>';
+    }
+    out += '<span class="tick end" style="left:100%"><i></i><span>'+fmt(s.d,2)+" "+r.dUnit+'</span></span>';
+    ticks.innerHTML = out;
+
+    // breakdown
+    var band = near.sf.name+" — typical "+near.sf.lo.toFixed(2)+"–"+near.sf.hi.toFixed(2)+
+               (near.inside?".":" (value is outside this band).");
+    var rows = [
+      ["Skid distance","d", fmt(s.d,3)+" "+r.dUnit, "Measured length of the tyre friction mark.",""],
+      ["Drag factor","f", s.f.toFixed(2), band, ""],
+      ["Road grade","G", (s.g>0?"+":"")+s.g.toFixed(1)+"%",
+        Math.abs(s.g)<0.05 ? "Level roadway — no adjustment." :
+        (s.g>0 ? "Uphill: gravity assists braking, so an equal mark means more speed."
+               : "Downhill: gravity opposes braking, so an equal mark means less speed."), ""],
+      ["Effective drag factor","f + G", r.fEff.toFixed(2), "Drag factor after the grade adjustment.","derived"],
+      ["Braking efficiency","η", s.eta+"%", effDetail(s.eta), ""],
+      ["Unit constant","C", String(r.C), metric ? "Metric coefficient — metres to km/h." : "Imperial coefficient — feet to mph.",""],
+      ["Minimum calculated speed","S", fmt(r.S,2)+" "+r.unit, "S = √("+r.C+" × d × f × η)","result"]
+    ];
+    tbody.innerHTML = rows.map(function(row){
+      return '<tr class="'+row[4]+'"><td class="p">'+row[0]+' <em>('+row[1]+')</em></td>'+
+             '<td class="v">'+row[2]+'</td><td class="d">'+row[3]+'</td></tr>';
+    }).join("");
+  }
+
+  function setUnit(u){
+    if(u===s.unit) return;
+    s.d = u==="imperial" ? s.d/0.3048 : s.d*0.3048;
+    s.unit = u;
+    dist.value = fmt(s.d,3).replace(/,/g,"");
+    el("uMetric").setAttribute("aria-pressed", String(u==="metric"));
+    el("uImperial").setAttribute("aria-pressed", String(u==="imperial"));
+    render();
+  }
+
+  dist.addEventListener("input", function(){
+    var v = parseFloat(dist.value.replace(/,/g,""));
+    var ok = isFinite(v) && v>0;
+    dist.classList.toggle("bad", !ok);
+    distErr.style.display = ok ? "none" : "block";
+    if(ok){ s.d=v; render(); }
+  });
+  dragR.addEventListener("input", function(){ s.f=parseFloat(dragR.value); render(); });
+  effR.addEventListener("input", function(){ s.eta=parseInt(effR.value,10); render(); });
+  gradeR.addEventListener("input", function(){ s.g=parseFloat(gradeR.value); render(); });
+  el("uMetric").addEventListener("click", function(){ setUnit("metric"); });
+  el("uImperial").addEventListener("click", function(){ setUnit("imperial"); });
+
+  el("reset").addEventListener("click", function(){
+    s = Object.assign({}, DEFAULTS);
+    dist.value = "18.288"; dist.classList.remove("bad"); distErr.style.display="none";
+    dragR.value="0.70"; effR.value="100"; gradeR.value="0";
+    el("uMetric").setAttribute("aria-pressed","true");
+    el("uImperial").setAttribute("aria-pressed","false");
+    render();
+  });
+
+  el("copy").addEventListener("click", function(){
+    var r = compute(), near = nearestSurface(s.f).sf;
+    var text = [
+      "SKID SPEED — MINIMUM CALCULATED",
+      "Skid distance (d):      "+fmt(s.d,3)+" "+r.dUnit,
+      "Drag factor (f):        "+s.f.toFixed(2)+"  ("+near.name+")",
+      "Road grade (G):         "+(s.g>0?"+":"")+s.g.toFixed(1)+"%",
+      "Effective f (f + G):    "+r.fEff.toFixed(2),
+      "Braking efficiency (η): "+s.eta+"%",
+      "Unit constant (C):      "+r.C,
+      "Minimum speed (S):      "+fmt(r.S,2)+" "+r.unit+"   ("+fmt(r.metric?r.mph:r.kmh,2)+" "+(r.metric?"mph":"km/h")+")",
+      "S = √("+r.C+" × "+fmt(s.d,3)+" × "+r.fEff.toFixed(2)+" × "+(s.eta/100).toFixed(2)+")",
+      "Minimum only: excludes pre-skid deceleration, impact energy and post-impact travel."
+    ].join("\n");
+    var done = function(){
+      var st=el("copyState"); st.classList.add("on");
+      setTimeout(function(){ st.classList.remove("on"); }, 1800);
+    };
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(done, done);
+    } else { done(); }
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
